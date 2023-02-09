@@ -24,7 +24,7 @@ app.get("/api/notes", (req, res) => {
 app.post("/api/notes", (req, res) => {
   const { title, text } = req.body;
   if (title && text) {
-    const newNote = { title: title, text: text, id: title };
+    const newNote = { title: title, text: text, id: title.trim() };
 
     readFromFile("./db/notes.json", "utf8", (err, data) => {
       if (err) throw err;
