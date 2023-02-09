@@ -8,14 +8,14 @@ const PORT = process.env.PORT || 3001;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("assets"));
-const readFromFile = util.promisify(fs.readFile);
+const promiseFromFile = util.promisify(fs.readFile);
 
 app.get("/notes", (req, res) => {
   res.sendFile(path.join(__dirname, "assets/notes.html"));
 });
 
 app.get("/api/notes", (req, res) => {
-  readFromFile("./db/notes.json", "utf8", (err, data) => {
+  promiseFromFile("./db/notes.json", "utf8", (err, data) => {
     if (err) throw err;
     res.send(JSON.parse(data));
   });
@@ -26,7 +26,7 @@ app.post("/api/notes", (req, res) => {
   if (title && text) {
     const newNote = { title: title, text: text, id: title.trim() };
 
-    readFromFile("./db/notes.json", "utf8", (err, data) => {
+    promiseFromFile("./db/notes.json", "utf8", (err, data) => {
       if (err) throw err;
       const parsedNotes = JSON.parse(data);
       parsedNotes.push(newNote);
@@ -36,24 +36,20 @@ app.post("/api/notes", (req, res) => {
       });
     });
   } else {
-    res.status(500).json("Error in posting note");
+    res.status(500).json("There was an error when posting a note");
   }
 });
 
 app.delete("/api/notes/:id", (req, res) => {
-  readFromFile("./db/notes.json", "utf8", (err, data) => {
+  promiseFromFile("./db/notes.json", "utf8", (err, data) => {
     if (err) throw err;
     let notes = JSON.parse(data);
     notes = notes.filter((note) => note.id !== req.params.id);
     fs.writeFile("./db/notes.json", JSON.stringify(notes), (err) => {
       if (err) throw err;
-      res.send("Note Deleted");
+      res.send("Deleted Note");
     });
   });
-});
-
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "assets/index.html"));
 });
 
 app.listen(PORT, () => {
