@@ -1,4 +1,5 @@
 const express = require("express");
+// const uniqid = require("uniqid");
 const path = require("path");
 const fs = require("fs");
 const util = require("util");
@@ -10,41 +11,54 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static("assets"));
 const readFromFile = util.promisify(fs.readFile);
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
+// app.get("/", (req, res) => {
+//   res.sendFile(path.join(__dirname, "assets/index.html"));
+// });
 
 app.get("/notes", (req, res) => {
   res.sendFile(path.join(__dirname, "assets/notes.html"));
 });
 
 app.get("/api/notes", (req, res) => {
-  console.info("request recieved");
-  readFromFile("./db/notes.json").then((data) => res.json(JSON.parse(data)));
+  readFromFile("./db/notes.json", "utf8", (err, data) => {
+    if (err) throw err;
+    res.send(JSON.parse(data));
+  });
 });
 
 app.post("/api/notes", (req, res) => {
-  fs.readFile("notes.json", "utf8", (err, data) => {
+  const { title, text } = req.body;
+  if (title && text) {
+    const newNote = { title: title, text: text, id: title };
+
+    readFromFile("./db/notes.json", "utf8", (err, data) => {
+      if (err) throw err;
+      const parsedNotes = JSON.parse(data);
+      parsedNotes.push(newNote);
+      fs.writeFile("./db/notes.json", JSON.stringify(parsedNotes), (err) => {
+        if (err) throw err;
+        res.send("Note Saved");
+      });
+    });
+  } else {
+    res.status(500).json("Error in posting note");
+  }
+});
+
+app.delete("/api/notes/:id", (req, res) => {
+  readFromFile("./db/notes.json", "utf8", (err, data) => {
     if (err) throw err;
     let notes = JSON.parse(data);
-    notes.push(req.body);
-    fs.writeFile("notes.json", JSON.stringify(notes), (err) => {
+    notes = notes.filter((note) => note.id !== req.params.id);
+    fs.writeFile("./db/notes.json", JSON.stringify(notes), (err) => {
       if (err) throw err;
-      res.send("Note saved");
+      res.send("Note Deleted");
     });
   });
 });
 
-app.delete("/api/notes/:id", (req, res) => {
-  fs.readFile("notes.json", "utf8", (err, data) => {
-    if (err) throw err;
-    let notes = JSON.parse(data);
-    notes = notes.filter((note) => note.id !== req.params.id);
-    fs.writeFile("notes.json", JSON.stringify(notes), (err) => {
-      if (err) throw err;
-      res.send("Note deleted");
-    });
-  });
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "assets/index.html"));
 });
 
 app.listen(PORT, () => {
